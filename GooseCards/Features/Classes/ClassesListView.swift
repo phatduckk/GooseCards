@@ -170,22 +170,25 @@ private struct AllEmptyClassesView: View {
 struct ClassTileView: View {
     let studyClass: StudyClass
 
+    private var bgColor: Color { KidPalette.color(forHex: studyClass.colorHex) }
+    private var textColor: Color { bgColor.readableForeground() }
+
     var body: some View {
         VStack(spacing: 10) {
             Text(studyClass.emoji)
                 .font(.system(size: 44))
             Text(studyClass.name)
                 .font(Theme.headlineFont)
-                .foregroundStyle(.white)
+                .foregroundStyle(textColor)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
             Text("\(studyClass.sets.count) set\(studyClass.sets.count == 1 ? "" : "s")")
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(textColor.opacity(0.8))
         }
         .frame(maxWidth: .infinity, minHeight: 150)
         .padding()
-        .background(KidPalette.color(forHex: studyClass.colorHex))
+        .background(bgColor)
         .clipShape(RoundedRectangle(cornerRadius: Theme.tileCorner, style: .continuous))
         .kidTileShadow()
     }

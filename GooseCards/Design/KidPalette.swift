@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct KidColor: Identifiable, Hashable {
     let name: String
@@ -34,6 +37,27 @@ enum KidPalette {
 }
 
 extension Color {
+    /// A darker, more saturated version of this color's own hue — legible
+    /// as text/foreground sitting on top of this same color used as a
+    /// light pastel background or wash. Same formula everywhere (tile
+    /// text, pill text in both its selected and unselected states) so
+    /// "a class's color" reads as one consistent color across the app,
+    /// just lighter for fills and darker for text on top of them. Falls
+    /// back to a plain dark gray for colors with no real hue (e.g. the
+    /// neutral "All" filter chip), since a hue can't be preserved there.
+    func readableForeground() -> Color {
+        #if canImport(UIKit)
+        let ui = UIColor(self)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard ui.getHue(&h, saturation: &s, brightness: &b, alpha: &a), s > 0.08 else {
+            return Color(white: 0.32)
+        }
+        return Color(hue: h, saturation: 0.65, brightness: 0.42)
+        #else
+        return self
+        #endif
+    }
+
     init?(hex: String) {
         var sanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         sanitized = sanitized.replacingOccurrences(of: "#", with: "")

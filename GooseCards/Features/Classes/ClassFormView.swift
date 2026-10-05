@@ -110,7 +110,7 @@ struct ColorSwatchGrid: View {
                     .overlay {
                         if selectedHex == swatch.hex {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(.white)
+                                .foregroundStyle(KidPalette.color(forHex: swatch.hex).readableForeground())
                                 .fontWeight(.bold)
                         }
                     }
