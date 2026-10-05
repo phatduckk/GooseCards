@@ -7,6 +7,11 @@ struct ClassesListView: View {
 
     @State private var isPresentingNewClass = false
     @State private var isPresentingImport = false
+    /// Set aside when the import sheet asks to start a quiz; consumed in its
+    /// onDismiss so we don't present a new sheet while one is still closing.
+    @State private var pendingQuizSet: FlashCardSet?
+    @State private var quizConfigSet: FlashCardSet?
+    @State private var activeConfig: QuizConfig?
 
     private let columns = [GridItem(.adaptive(minimum: 170), spacing: 18)]
 
@@ -53,10 +58,27 @@ struct ClassesListView: View {
         .sheet(isPresented: $isPresentingNewClass) {
             ClassFormView(mode: .create)
         }
-        .sheet(isPresented: $isPresentingImport) {
-            NavigationStack {
-                ImportBrowserView()
+        .sheet(isPresented: $isPresentingImport, onDismiss: {
+            if let pendingQuizSet {
+                quizConfigSet = pendingQuizSet
+                self.pendingQuizSet = nil
             }
+        }) {
+            NavigationStack {
+                ImportBrowserView { set in
+                    pendingQuizSet = set
+                    isPresentingImport = false
+                }
+            }
+        }
+        .sheet(item: $quizConfigSet) { set in
+            QuizConfigView(set: set) { config in
+                quizConfigSet = nil
+                activeConfig = config
+            }
+        }
+        .fullScreenCover(item: $activeConfig) { config in
+            QuizPlayView(config: config) { activeConfig = nil }
         }
     }
 }

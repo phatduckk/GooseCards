@@ -24,6 +24,9 @@ enum ImportStatus {
 }
 
 struct ImportBrowserView: View {
+    /// Called when the user wants to quiz on a set they just imported.
+    var onStartQuiz: (FlashCardSet) -> Void = { _ in }
+
     @Query private var importedRecords: [ImportedFileRecord]
     @Query(sort: \StudyClass.createdAt) private var classes: [StudyClass]
 
@@ -79,7 +82,10 @@ struct ImportBrowserView: View {
         .refreshable { await load() }
         .task { await load() }
         .sheet(item: $fileToImport) { file in
-            ImportClassPickerView(file: file, classes: classes)
+            ImportClassPickerView(file: file, classes: classes) { set in
+                fileToImport = nil
+                onStartQuiz(set)
+            }
         }
     }
 

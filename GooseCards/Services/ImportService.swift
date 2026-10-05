@@ -5,13 +5,15 @@ enum ImportService {
     /// Downloads a Cards/*.csv file, creates a FlashCardSet (with its cards and
     /// any per-card images) inside the given class, and records the import.
     /// `onProgress` is called on the main actor with a short status string.
+    /// Returns the newly created set so the caller can offer to quiz on it.
     @MainActor
+    @discardableResult
     static func importCards(
         file: RemoteCardFile,
         into studyClass: StudyClass,
         context: ModelContext,
         onProgress: @escaping (String) -> Void = { _ in }
-    ) async throws {
+    ) async throws -> FlashCardSet {
         onProgress("Downloading card list…")
         let csvText = try await GitHubCardsService.downloadCSV(file)
         let rows = CSVParser.parseCards(from: csvText)
@@ -31,6 +33,7 @@ enum ImportService {
 
         recordImport(file: file, context: context)
         try context.save()
+        return newSet
     }
 
     private static func recordImport(file: RemoteCardFile, context: ModelContext) {
