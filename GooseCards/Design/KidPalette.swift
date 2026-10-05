@@ -7,23 +7,26 @@ struct KidColor: Identifiable, Hashable {
 }
 
 enum KidPalette {
+    /// Soft pastel rainbow — 12 hues evenly spaced around the color wheel at
+    /// HSL(_, 60%, 80%), so they stay easy to tell apart while reading as
+    /// gentle rather than eye-jarring.
     static let all: [KidColor] = [
-        KidColor(name: "Tomato", hex: "#FF6B6B"),
-        KidColor(name: "Tangerine", hex: "#FF9F43"),
-        KidColor(name: "Sunshine", hex: "#FFD93D"),
-        KidColor(name: "Lime", hex: "#8BC34A"),
-        KidColor(name: "Mint", hex: "#2EC4B6"),
-        KidColor(name: "Sky", hex: "#4D96FF"),
-        KidColor(name: "Cornflower", hex: "#5B6EF5"),
-        KidColor(name: "Grape", hex: "#9D65C9"),
-        KidColor(name: "Bubblegum", hex: "#FF6FB5"),
-        KidColor(name: "Watermelon", hex: "#FF4D6D"),
-        KidColor(name: "Teal", hex: "#20C997"),
-        KidColor(name: "Slate", hex: "#6C7A89"),
+        KidColor(name: "Coral", hex: "#EBADAD"),
+        KidColor(name: "Peach", hex: "#EBCCAD"),
+        KidColor(name: "Lemon", hex: "#EBEBAD"),
+        KidColor(name: "Lime", hex: "#CCEBAD"),
+        KidColor(name: "Mint", hex: "#ADEBAD"),
+        KidColor(name: "Seafoam", hex: "#ADEBCC"),
+        KidColor(name: "Aqua", hex: "#ADEBEB"),
+        KidColor(name: "Sky", hex: "#ADCCEB"),
+        KidColor(name: "Periwinkle", hex: "#ADADEB"),
+        KidColor(name: "Lavender", hex: "#CCADEB"),
+        KidColor(name: "Orchid", hex: "#EBADEB"),
+        KidColor(name: "Bubblegum", hex: "#EBADCC"),
     ]
 
-    /// The vivid, kid-friendly subset used for auto-assigned colors (no muted/drab tones).
-    static let funForKids: [KidColor] = all.filter { $0.name != "Slate" }
+    /// Full palette — every entry is already a soft, kid-friendly pastel.
+    static let funForKids: [KidColor] = all
 
     static func color(forHex hex: String) -> Color {
         Color(hex: hex) ?? .gray

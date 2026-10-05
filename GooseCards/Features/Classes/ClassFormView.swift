@@ -96,14 +96,17 @@ struct ClassFormView: View {
 
 struct ColorSwatchGrid: View {
     @Binding var selectedHex: String
-    private let columns = [GridItem(.adaptive(minimum: 44), spacing: 12)]
+    /// Fixed 6 columns so the 12-color palette always renders as exactly
+    /// 2 full rows, regardless of screen width (an adaptive grid could fit
+    /// an odd number per row and leave a trailing partial row).
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 6)
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(KidPalette.all) { swatch in
                 Circle()
                     .fill(KidPalette.color(forHex: swatch.hex))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 40)
                     .overlay {
                         if selectedHex == swatch.hex {
                             Image(systemName: "checkmark")
