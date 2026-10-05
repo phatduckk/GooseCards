@@ -1,0 +1,14 @@
+# Xcode / build
+build/
+DerivedData/
+*.xcodeproj
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+.swiftpm/
+
+# Secrets
+GooseCards/Services/Secrets.swift
+
+# macOS
+.DS_Store

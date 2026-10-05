@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect x="0" y="0" width="1024" height="1024" fill="#FFC857"/>
+
+  <!-- dark outline silhouette: body + head, padded, seamless since same fill -->
+  <ellipse cx="512" cy="705" rx="221" ry="256" fill="#3A2E28"/>
+  <circle cx="512" cy="368" r="144" fill="#3A2E28"/>
+
+  <!-- white body + head fill -->
+  <ellipse cx="512" cy="705" rx="205" ry="240" fill="#FFFFFF"/>
+  <circle cx="512" cy="368" r="128" fill="#FFFFFF"/>
+
+  <!-- wings, attached as patches on top of the body -->
+  <ellipse cx="317" cy="720" rx="55" ry="135" fill="#ECEFF1" stroke="#3A2E28" stroke-width="9"/>
+  <ellipse cx="707" cy="720" rx="55" ry="135" fill="#ECEFF1" stroke="#3A2E28" stroke-width="9"/>
+
+  <!-- feet -->
+  <path d="M 410 920 Q 410 970 450 975 Q 480 978 490 950 Q 470 930 440 925 Z" fill="#FF9800" stroke="#3A2E28" stroke-width="8"/>
+  <path d="M 614 920 Q 614 970 574 975 Q 544 978 534 950 Q 554 930 584 925 Z" fill="#FF9800" stroke="#3A2E28" stroke-width="8"/>
+
+  <!-- beak -->
+  <path d="M 460 416 Q 512 468 564 416 Q 512 400 460 416 Z" fill="#FF9800" stroke="#3A2E28" stroke-width="8"/>
+
+  <!-- cheeks -->
+  <circle cx="418" cy="388" r="20" fill="#FFC2C7"/>
+  <circle cx="606" cy="388" r="20" fill="#FFC2C7"/>
+
+  <!-- eyes -->
+  <circle cx="461" cy="328" r="20" fill="#2B2B2B"/>
+  <circle cx="563" cy="328" r="20" fill="#2B2B2B"/>
+  <circle cx="468" cy="320" r="7" fill="#FFFFFF"/>
+  <circle cx="570" cy="320" r="7" fill="#FFFFFF"/>
+
+  <!-- graduation cap -->
+  <polygon points="512,120 680,183 512,246 344,183" fill="#2D3142" stroke="#1B1E2A" stroke-width="6"/>
+  <rect x="472" y="183" width="80" height="60" rx="8" fill="#2D3142"/>
+  <circle cx="512" cy="183" r="12" fill="#FFC857" stroke="#1B1E2A" stroke-width="4"/>
+  <line x1="512" y1="183" x2="598" y2="258" stroke="#FFC857" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="598" cy="266" r="13" fill="#FFC857" stroke="#1B1E2A" stroke-width="4"/>
+</svg>
