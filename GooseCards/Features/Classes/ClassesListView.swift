@@ -53,8 +53,10 @@ private struct EmptyClassesView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("🦢")
-                .font(.system(size: 80))
+            Image("GooseMascot")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 120)
             Text("No classes yet!")
                 .font(Theme.titleFont)
             Text("Add a class like Math or History to get started.")
