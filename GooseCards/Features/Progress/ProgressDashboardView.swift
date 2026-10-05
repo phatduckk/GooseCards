@@ -49,13 +49,23 @@ struct ProgressDashboardView: View {
 
     private var filters: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Picker("Class", selection: $selectedClassID) {
-                Text("All Classes").tag(UUID?.none)
-                ForEach(classes) { studyClass in
-                    Text("\(studyClass.emoji) \(studyClass.name)").tag(Optional(studyClass.id))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    FilterChip(title: "All Classes", color: .gray, isSelected: selectedClassID == nil) {
+                        selectedClassID = nil
+                    }
+                    ForEach(classes) { studyClass in
+                        FilterChip(
+                            title: "\(studyClass.emoji) \(studyClass.name)",
+                            color: KidPalette.color(forHex: studyClass.colorHex),
+                            isSelected: selectedClassID == studyClass.id
+                        ) {
+                            selectedClassID = studyClass.id
+                        }
+                    }
                 }
+                .padding(.vertical, 2)
             }
-            .pickerStyle(.menu)
 
             Picker("Quiz", selection: $selectedSetID) {
                 Text("All Quizzes").tag(UUID?.none)

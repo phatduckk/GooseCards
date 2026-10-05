@@ -100,26 +100,6 @@ struct QuizBrowserView: View {
     }
 }
 
-private struct FilterChip: View {
-    let title: String
-    let color: Color
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(isSelected ? color : color.opacity(0.15))
-                .foregroundStyle(isSelected ? .white : color)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 private struct QuizRow: View {
     let set: FlashCardSet
 
