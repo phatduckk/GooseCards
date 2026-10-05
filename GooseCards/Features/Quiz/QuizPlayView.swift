@@ -12,15 +12,21 @@ struct QuizPlayView: View {
     @State private var totalCount = 0
     @State private var answeredCount = 0
     @State private var isFlipped = false
+    @State private var isHintRevealed = false
     @State private var numRight = 0
     @State private var numWrong = 0
     @State private var everSkippedIDs: Set<UUID> = []
     @State private var secondsRemaining = 0
     @State private var isFinished = false
+    @State private var isShowingQuitConfirm = false
     @State private var startedAt = Date()
     @State private var savedAttempt: QuizAttempt?
 
     private var currentCard: FlashCard? { queue.first }
+
+    private var accentColor: Color {
+        KidPalette.color(forHex: config.set.studyClass?.colorHex ?? KidPalette.all[0].hex)
+    }
 
     var body: some View {
         Group {
@@ -47,40 +53,67 @@ struct QuizPlayView: View {
     private var quizBody: some View {
         VStack(spacing: 16) {
             header
-            Spacer()
-            if let card = currentCard {
-                if everSkippedIDs.contains(card.id) {
-                    Label("You skipped this one — give it another try!", systemImage: "arrow.uturn.forward")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.orange)
-                }
-                FlipCardView(card: card, isFlipped: $isFlipped)
-                    .padding(.horizontal)
-                    .id(card.id)
+            if let card = currentCard, everSkippedIDs.contains(card.id) {
+                Label("You skipped this one — give it another try!", systemImage: "arrow.uturn.forward")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.orange.opacity(0.12)))
             }
-            Spacer()
+            if let card = currentCard {
+                FlipCardView(
+                    card: card,
+                    isFlipped: $isFlipped,
+                    isHintRevealed: $isHintRevealed,
+                    accentColor: accentColor
+                )
+                .frame(maxHeight: .infinity)
+                .id(card.id)
+            }
             answerButtons
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Quit") { onDone() }
-            }
+        .confirmationDialog(
+            "Quit this quiz? Your progress won't be saved.",
+            isPresented: $isShowingQuitConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Quit Quiz", role: .destructive) { onDone() }
+            Button("Keep Going", role: .cancel) {}
         }
     }
 
     private var header: some View {
-        HStack {
-            Text("\(min(answeredCount + 1, totalCount)) / \(totalCount)")
-                .font(Theme.headlineFont)
-            Spacer()
-            if config.useTimer {
-                Label(timeString, systemImage: "timer")
-                    .font(Theme.headlineFont)
-                    .foregroundStyle(secondsRemaining <= 10 ? .red : .primary)
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                Button {
+                    isShowingQuitConfirm = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("Card \(min(answeredCount + 1, totalCount)) of \(totalCount)")
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+
+                Spacer()
+
+                if config.useTimer {
+                    Label(timeString, systemImage: "timer")
+                        .font(.subheadline.weight(.bold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill((secondsRemaining <= 10 ? Color.red : accentColor).opacity(0.15)))
+                        .foregroundStyle(secondsRemaining <= 10 ? .red : accentColor)
+                }
             }
+
+            ProgressView(value: Double(answeredCount), total: Double(max(totalCount, 1)))
+                .tint(accentColor)
         }
     }
 
@@ -150,6 +183,7 @@ struct QuizPlayView: View {
         queue.removeFirst()
         queue.append(card)
         isFlipped = false
+        isHintRevealed = false
         Haptics.tap()
     }
 
@@ -165,6 +199,7 @@ struct QuizPlayView: View {
         queue.removeFirst()
         answeredCount += 1
         isFlipped = false
+        isHintRevealed = false
         if queue.isEmpty {
             finish()
         }
@@ -195,17 +230,30 @@ struct QuizPlayView: View {
 struct FlipCardView: View {
     let card: FlashCard
     @Binding var isFlipped: Bool
+    @Binding var isHintRevealed: Bool
+    let accentColor: Color
 
     var body: some View {
         ZStack {
-            faceView(text: card.front, imageData: nil)
-                .opacity(isFlipped ? 0 : 1)
-                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
-            faceView(text: card.back, imageData: card.imageData)
-                .opacity(isFlipped ? 1 : 0)
-                .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+            faceView(
+                text: card.front,
+                imageData: isHintRevealed ? card.imageData : nil,
+                badge: ("Question", "questionmark.circle.fill"),
+                showsHintButton: !isHintRevealed && card.imageData != nil
+            )
+            .opacity(isFlipped ? 0 : 1)
+            .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+
+            faceView(
+                text: card.back,
+                imageData: card.imageData,
+                badge: ("Answer", "checkmark.seal.fill"),
+                showsHintButton: false
+            )
+            .opacity(isFlipped ? 1 : 0)
+            .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
         }
-        .frame(maxWidth: .infinity, minHeight: 320)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onTapGesture {
             Haptics.tap()
             withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
@@ -215,25 +263,133 @@ struct FlipCardView: View {
     }
 
     @ViewBuilder
-    private func faceView(text: String, imageData: Data?) -> some View {
+    private func faceView(text: String, imageData: Data?, badge: (label: String, icon: String), showsHintButton: Bool) -> some View {
         ZStack {
             if let imageData, let uiImage = UIImage(data: imageData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .clipped()
-                Color.black.opacity(0.35)
+                // A hard-resolved GeometryReader breaks the layout circularity that
+                // occurs when scaledToFill()'s aspect-ratio negotiation shares a
+                // ZStack with another measurement-driven sibling (AdaptiveQuizText's
+                // ViewThatFits) — without it, the image can resolve to a wildly
+                // oversized frame that bleeds past the card's clip bounds.
+                GeometryReader { imageGeo in
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: imageGeo.size.width, height: imageGeo.size.height)
+                        .clipped()
+                }
+                LinearGradient(
+                    colors: [.black.opacity(0.15), .black.opacity(0.55)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             } else {
-                Color.accentColor.opacity(0.15)
+                LinedPaperBackground(tint: accentColor)
             }
-            Text(text)
-                .font(.system(.title, design: .rounded)).bold()
-                .multilineTextAlignment(.center)
-                .foregroundStyle(imageData == nil ? Color.primary : Color.white)
-                .padding(24)
+
+            VStack {
+                HStack {
+                    Label(badge.label, systemImage: badge.icon)
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .foregroundStyle(imageData == nil ? accentColor : .white)
+
+                    Spacer()
+
+                    if showsHintButton {
+                        Button {
+                            Haptics.tap()
+                            isHintRevealed = true
+                        } label: {
+                            Label("Hint", systemImage: "lightbulb.fill")
+                                .font(.caption.weight(.bold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Capsule().fill(.ultraThinMaterial))
+                                .foregroundStyle(.yellow)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                AdaptiveQuizText(text: text, color: imageData == nil ? Color.primary : Color.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .padding(24)
         }
-        .frame(maxWidth: .infinity, minHeight: 320)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous)
+                .stroke(accentColor.opacity(0.4), lineWidth: 2)
+        )
         .kidTileShadow()
+    }
+}
+
+/// Renders `text` at the largest size from a descending ladder that still
+/// fits the space SwiftUI's own layout system offers — using ViewThatFits
+/// (rather than a separate UIKit measurement pass) guarantees the chosen
+/// size is correct, since the same engine that measures also renders.
+/// Short strings naturally land on a big single line; long ones fall back
+/// to wrapping at a smaller size that still fits.
+private struct AdaptiveQuizText: View {
+    let text: String
+    let color: Color
+
+    private static let sizes: [CGFloat] = [160, 140, 120, 104, 90, 78, 66, 56, 48, 40, 34, 28, 23, 19]
+
+    var body: some View {
+        ViewThatFits(in: [.horizontal, .vertical]) {
+            ForEach(Self.sizes, id: \.self) { size in
+                styledText(size: size)
+            }
+            // Guaranteed-to-render fallback for pathologically long text.
+            styledText(size: Self.sizes.last!)
+                .minimumScaleFactor(0.4)
+                .lineLimit(8)
+        }
+    }
+
+    private func styledText(size: CGFloat) -> some View {
+        Text(text)
+            .font(.system(size: size, weight: .heavy, design: .rounded))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(color)
+    }
+}
+
+/// Loose-leaf-style ruled background with a notebook margin line, used
+/// behind text-only card faces so they read as an actual flash card.
+private struct LinedPaperBackground: View {
+    let tint: Color
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+
+            VStack(spacing: 0) {
+                ForEach(0..<10, id: \.self) { _ in
+                    Spacer(minLength: 0)
+                    Rectangle()
+                        .fill(tint.opacity(0.14))
+                        .frame(height: 1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 30)
+
+            HStack {
+                Rectangle()
+                    .fill(Color.pink.opacity(0.35))
+                    .frame(width: 2)
+                Spacer()
+            }
+            .padding(.leading, 38)
+            .padding(.vertical, 22)
+        }
     }
 }

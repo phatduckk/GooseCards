@@ -82,7 +82,7 @@ struct CardFormView: View {
             .task(id: photosPickerItem) {
                 guard let photosPickerItem else { return }
                 if let data = try? await photosPickerItem.loadTransferable(type: Data.self) {
-                    imageData = data
+                    imageData = ImageProcessing.downsample(data: data) ?? data
                 }
             }
             .sheet(isPresented: $isShowingImageSearch) {

@@ -91,7 +91,7 @@ struct ImageSearchView: View {
         Task {
             do {
                 let data = try await UnsplashService.downloadImageData(from: photo.urls.small)
-                onSelect(data)
+                onSelect(ImageProcessing.downsample(data: data) ?? data)
                 Haptics.success()
                 dismiss()
             } catch {

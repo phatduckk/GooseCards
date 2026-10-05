@@ -25,7 +25,9 @@ enum ImportService {
             var imageData: Data?
             if let urlString = row.imageURLString {
                 onProgress("Downloading image \(index + 1) of \(rows.count)…")
-                imageData = await GitHubCardsService.downloadImageData(from: urlString)
+                if let raw = await GitHubCardsService.downloadImageData(from: urlString) {
+                    imageData = ImageProcessing.downsample(data: raw)
+                }
             }
             let card = FlashCard(front: row.front, back: row.back, imageData: imageData, sortIndex: index, set: newSet)
             context.insert(card)
