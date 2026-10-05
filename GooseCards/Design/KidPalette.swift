@@ -22,6 +22,9 @@ enum KidPalette {
         KidColor(name: "Slate", hex: "#6C7A89"),
     ]
 
+    /// The vivid, kid-friendly subset used for auto-assigned colors (no muted/drab tones).
+    static let funForKids: [KidColor] = all.filter { $0.name != "Slate" }
+
     static func color(forHex hex: String) -> Color {
         Color(hex: hex) ?? .gray
     }
