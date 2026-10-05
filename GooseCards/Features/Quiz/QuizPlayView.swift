@@ -350,29 +350,84 @@ struct FlipCardView: View {
 /// size is correct, since the same engine that measures also renders.
 /// Short strings naturally land on a big single line; long ones fall back
 /// to wrapping at a smaller size that still fits.
+///
+/// Lines starting with "*" (e.g. imported from a source using Markdown-style
+/// fake bullets) render as real bulleted list rows — a glyph plus
+/// hanging-indent wrapped text — instead of a literal asterisk followed by
+/// text that can overflow unpredictably.
 private struct AdaptiveQuizText: View {
     let text: String
     let color: Color
 
     private static let sizes: [CGFloat] = [160, 140, 120, 104, 90, 78, 66, 56, 48, 40, 34, 28, 23, 19]
 
-    var body: some View {
-        ViewThatFits(in: [.horizontal, .vertical]) {
-            ForEach(Self.sizes, id: \.self) { size in
-                styledText(size: size)
+    private struct Line: Identifiable {
+        let id = Int.random(in: Int.min...Int.max)
+        let content: String
+        let isBullet: Bool
+    }
+
+    /// Splits on "\n" and classifies each line as a bullet ("^\s*\*.*$") or
+    /// plain text, stripping the leading "*" marker from bullet lines.
+    private var lines: [Line] {
+        text.components(separatedBy: "\n").compactMap { raw in
+            let trimmed = raw.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("*") {
+                let content = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
+                return content.isEmpty ? nil : Line(content: content, isBullet: true)
+            } else {
+                return trimmed.isEmpty ? nil : Line(content: trimmed, isBullet: false)
             }
-            // Guaranteed-to-render fallback for pathologically long text.
-            styledText(size: Self.sizes.last!)
-                .minimumScaleFactor(0.4)
-                .lineLimit(8)
         }
     }
 
-    private func styledText(size: CGFloat) -> some View {
-        Text(text)
+    private var hasBullets: Bool { lines.contains { $0.isBullet } }
+
+    var body: some View {
+        ViewThatFits(in: [.horizontal, .vertical]) {
+            ForEach(Self.sizes, id: \.self) { size in
+                content(size: size)
+            }
+            // Guaranteed-to-render fallback for pathologically long text.
+            content(size: Self.sizes.last!, minScale: 0.4)
+        }
+    }
+
+    @ViewBuilder
+    private func content(size: CGFloat, minScale: CGFloat? = nil) -> some View {
+        if hasBullets {
+            VStack(alignment: .leading, spacing: size * 0.28) {
+                ForEach(lines) { line in
+                    if line.isBullet {
+                        HStack(alignment: .top, spacing: size * 0.22) {
+                            Text("•")
+                            lineText(line.content, size: size, minScale: minScale)
+                        }
+                    } else {
+                        lineText(line.content, size: size, minScale: minScale)
+                    }
+                }
+            }
             .font(.system(size: size, weight: .heavy, design: .rounded))
-            .multilineTextAlignment(.center)
             .foregroundStyle(color)
+        } else {
+            lineText(text, size: size, minScale: minScale)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    @ViewBuilder
+    private func lineText(_ string: String, size: CGFloat, minScale: CGFloat?) -> some View {
+        if let minScale {
+            Text(string)
+                .font(.system(size: size, weight: .heavy, design: .rounded))
+                .foregroundStyle(color)
+                .minimumScaleFactor(minScale)
+        } else {
+            Text(string)
+                .font(.system(size: size, weight: .heavy, design: .rounded))
+                .foregroundStyle(color)
+        }
     }
 }
 

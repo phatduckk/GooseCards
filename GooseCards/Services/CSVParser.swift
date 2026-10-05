@@ -29,6 +29,14 @@ enum CSVParser {
                     } else {
                         inQuotes = false
                     }
+                } else if c == "\r" {
+                    // Normalize embedded CRLF/CR line breaks inside a quoted
+                    // multi-line cell to a single "\n", so display code only
+                    // ever has to reason about one newline convention.
+                    field.unicodeScalars.append("\n")
+                    if i + 1 < scalars.count, scalars[i + 1] == "\n" {
+                        i += 1
+                    }
                 } else {
                     field.unicodeScalars.append(c)
                 }
