@@ -108,18 +108,24 @@ struct ProgressDashboardView: View {
             Text("History").font(Theme.headlineFont)
             ForEach(attempts.reversed()) { attempt in
                 HStack {
-                    Text(attempt.date, style: .date)
-                        .font(.subheadline)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(attempt.set?.name ?? "Quiz")
+                            .font(.headline)
+                            .lineLimit(1)
+                        Text(attempt.date, style: .date)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
                     Text("\(attempt.numRight)/\(attempt.numRight + attempt.numWrong)")
-                        .font(.subheadline)
+                        .font(.title3)
                         .foregroundStyle(.secondary)
                     Text(attempt.letterGrade)
-                        .font(.subheadline.bold())
+                        .font(.title2.bold())
                         .foregroundStyle(Color(hex: Grading.color(forGrade: attempt.letterGrade)) ?? .primary)
-                        .frame(width: 36)
+                        .frame(width: 48)
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 8)
                 Divider()
             }
         }
