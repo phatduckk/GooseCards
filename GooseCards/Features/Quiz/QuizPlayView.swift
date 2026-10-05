@@ -66,7 +66,8 @@ struct QuizPlayView: View {
                     card: card,
                     isFlipped: $isFlipped,
                     isHintRevealed: $isHintRevealed,
-                    accentColor: accentColor
+                    accentColor: accentColor,
+                    showImagesOnQuestion: config.showImagesOnQuestion
                 )
                 .frame(maxHeight: .infinity)
                 .id(card.id)
@@ -232,6 +233,11 @@ struct FlipCardView: View {
     @Binding var isFlipped: Bool
     @Binding var isHintRevealed: Bool
     let accentColor: Color
+    let showImagesOnQuestion: Bool
+
+    private var frontImageData: Data? {
+        showImagesOnQuestion || isHintRevealed ? card.imageData : nil
+    }
 
     var body: some View {
         // Hard-resolving the frame via GeometryReader (rather than relying on
@@ -244,9 +250,9 @@ struct FlipCardView: View {
             ZStack {
                 faceView(
                     text: card.front,
-                    imageData: isHintRevealed ? card.imageData : nil,
+                    imageData: frontImageData,
                     badge: ("Question", "questionmark.circle.fill"),
-                    showsHintButton: !isHintRevealed && card.imageData != nil
+                    showsHintButton: !showImagesOnQuestion && !isHintRevealed && card.imageData != nil
                 )
                 .opacity(isFlipped ? 0 : 1)
                 .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))

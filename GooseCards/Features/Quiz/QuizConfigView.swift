@@ -7,6 +7,7 @@ struct QuizConfig: Identifiable {
     let timerMinutes: Int
     let useQuestionLimit: Bool
     let questionLimit: Int
+    let showImagesOnQuestion: Bool
 }
 
 struct QuizConfigView: View {
@@ -19,8 +20,10 @@ struct QuizConfigView: View {
     @State private var timerMinutes = 3
     @State private var useQuestionLimit = false
     @State private var questionLimit = 10
+    @State private var showImagesOnQuestion = false
 
     private var cardCount: Int { max(set.cards.count, 1) }
+    private var hasAnyImages: Bool { self.set.cards.contains { $0.imageData != nil } }
 
     var body: some View {
         NavigationStack {
@@ -50,6 +53,14 @@ struct QuizConfigView: View {
                         Stepper("Questions: \(questionLimit)", value: $questionLimit, in: 1...cardCount)
                     }
                 }
+
+                if hasAnyImages {
+                    Section {
+                        Toggle("Show images behind question", isOn: $showImagesOnQuestion)
+                    } footer: {
+                        Text("Pictures appear on the question side right away, as a visual clue. No hint button needed.")
+                    }
+                }
             }
             .navigationTitle("Quiz Setup")
             .navigationBarTitleDisplayMode(.inline)
@@ -65,7 +76,8 @@ struct QuizConfigView: View {
                         useTimer: useTimer,
                         timerMinutes: timerMinutes,
                         useQuestionLimit: useQuestionLimit,
-                        questionLimit: min(questionLimit, cardCount)
+                        questionLimit: min(questionLimit, cardCount),
+                        showImagesOnQuestion: showImagesOnQuestion
                     )
                     onStart(config)
                 } label: {
