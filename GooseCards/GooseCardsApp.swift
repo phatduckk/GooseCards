@@ -6,7 +6,7 @@ struct GooseCardsApp: App {
     private let container: ModelContainer
 
     init() {
-        let schema = Schema([StudyClass.self, FlashCardSet.self, FlashCard.self, QuizAttempt.self])
+        let schema = Schema([StudyClass.self, FlashCardSet.self, FlashCard.self, QuizAttempt.self, ImportedFileRecord.self])
         do {
             container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema)])
         } catch {
