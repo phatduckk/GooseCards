@@ -48,33 +48,33 @@ struct ProgressDashboardView: View {
     }
 
     private var filters: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    FilterChip(title: "All Classes", color: .gray, isSelected: selectedClassID == nil) {
-                        selectedClassID = nil
-                    }
-                    ForEach(classes) { studyClass in
-                        FilterChip(
-                            title: "\(studyClass.emoji) \(studyClass.name)",
-                            color: KidPalette.color(forHex: studyClass.colorHex),
-                            isSelected: selectedClassID == studyClass.id
-                        ) {
-                            selectedClassID = studyClass.id
-                        }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                FilterChip(title: "All Classes", color: .gray, isSelected: selectedClassID == nil, textColorOverride: .white) {
+                    selectedClassID = nil
+                }
+                ForEach(classes) { studyClass in
+                    FilterChip(
+                        title: "\(studyClass.emoji) \(studyClass.name)",
+                        color: KidPalette.color(forHex: studyClass.colorHex),
+                        isSelected: selectedClassID == studyClass.id
+                    ) {
+                        selectedClassID = studyClass.id
                     }
                 }
-                .padding(.vertical, 2)
             }
-
-            Picker("Quiz", selection: $selectedSetID) {
-                Text("All Quizzes").tag(UUID?.none)
-                ForEach(availableSets) { set in
-                    Text("\(set.emoji) \(set.name)").tag(Optional(set.id))
-                }
-            }
-            .pickerStyle(.menu)
+            .padding(.vertical, 2)
         }
+    }
+
+    private var quizPicker: some View {
+        Picker("Quiz", selection: $selectedSetID) {
+            Text("All Quizzes").tag(UUID?.none)
+            ForEach(availableSets) { set in
+                Text("\(set.emoji) \(set.name)").tag(Optional(set.id))
+            }
+        }
+        .pickerStyle(.menu)
     }
 
     private var trendCard: some View {
@@ -115,7 +115,11 @@ struct ProgressDashboardView: View {
 
     private var historyList: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("History").font(Theme.headlineFont)
+            HStack {
+                Text("History").font(Theme.headlineFont)
+                Spacer()
+                quizPicker
+            }
             ForEach(attempts.reversed()) { attempt in
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {

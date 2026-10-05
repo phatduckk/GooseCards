@@ -25,7 +25,7 @@ struct QuizBrowserView: View {
             if !classes.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
-                        FilterChip(title: "All", color: .gray, isSelected: selectedClassID == nil) {
+                        FilterChip(title: "All", color: .gray, isSelected: selectedClassID == nil, textColorOverride: .white) {
                             selectedClassID = nil
                         }
                         ForEach(classes) { studyClass in
