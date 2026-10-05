@@ -234,30 +234,39 @@ struct FlipCardView: View {
     let accentColor: Color
 
     var body: some View {
-        ZStack {
-            faceView(
-                text: card.front,
-                imageData: isHintRevealed ? card.imageData : nil,
-                badge: ("Question", "questionmark.circle.fill"),
-                showsHintButton: !isHintRevealed && card.imageData != nil
-            )
-            .opacity(isFlipped ? 0 : 1)
-            .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+        // Hard-resolving the frame via GeometryReader (rather than relying on
+        // ambient .frame(maxWidth: .infinity, maxHeight: .infinity) sizing)
+        // pins the tap gesture's hit region to the card's actual rendered
+        // bounds. Without this, the gesture's hit-testable area can resolve
+        // larger than the visible, clipped card — letting taps on sibling
+        // controls (the quit button, Skip) register as a card flip instead.
+        GeometryReader { geo in
+            ZStack {
+                faceView(
+                    text: card.front,
+                    imageData: isHintRevealed ? card.imageData : nil,
+                    badge: ("Question", "questionmark.circle.fill"),
+                    showsHintButton: !isHintRevealed && card.imageData != nil
+                )
+                .opacity(isFlipped ? 0 : 1)
+                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
 
-            faceView(
-                text: card.back,
-                imageData: card.imageData,
-                badge: ("Answer", "checkmark.seal.fill"),
-                showsHintButton: false
-            )
-            .opacity(isFlipped ? 1 : 0)
-            .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onTapGesture {
-            Haptics.tap()
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                isFlipped.toggle()
+                faceView(
+                    text: card.back,
+                    imageData: card.imageData,
+                    badge: ("Answer", "checkmark.seal.fill"),
+                    showsHintButton: false
+                )
+                .opacity(isFlipped ? 1 : 0)
+                .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                Haptics.tap()
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                    isFlipped.toggle()
+                }
             }
         }
     }
