@@ -5,6 +5,8 @@ struct ClassesListView: View {
     @Query(sort: \StudyClass.createdAt) private var classes: [StudyClass]
     @Environment(\.modelContext) private var modelContext
 
+    @AppStorage("showEmptyClasses") private var showEmptyClasses = false
+
     @State private var isPresentingNewClass = false
     @State private var isPresentingImport = false
     /// Set aside when the import sheet asks to start a quiz; consumed in its
@@ -15,26 +17,41 @@ struct ClassesListView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 170), spacing: 18)]
 
+    private var visibleClasses: [StudyClass] {
+        showEmptyClasses ? classes : classes.filter { !$0.sets.isEmpty }
+    }
+
     var body: some View {
         ScrollView {
-            if classes.isEmpty {
-                EmptyClassesView(onAdd: { isPresentingNewClass = true })
-                    .padding(.top, 80)
-                    .frame(maxWidth: .infinity)
-            } else {
-                LazyVGrid(columns: columns, spacing: 18) {
-                    ForEach(classes) { studyClass in
-                        NavigationLink(value: studyClass) {
-                            ClassTileView(studyClass: studyClass)
-                        }
-                        .buttonStyle(BouncyButtonStyle())
-                    }
+            VStack(spacing: 0) {
+                if !classes.isEmpty {
+                    header
                 }
-                .padding()
+
+                if classes.isEmpty {
+                    EmptyClassesView(onAdd: { isPresentingNewClass = true })
+                        .padding(.top, 80)
+                        .frame(maxWidth: .infinity)
+                } else if visibleClasses.isEmpty {
+                    AllEmptyClassesView(onShowEmpty: { showEmptyClasses = true })
+                        .padding(.top, 60)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    LazyVGrid(columns: columns, spacing: 18) {
+                        ForEach(visibleClasses) { studyClass in
+                            NavigationLink(value: studyClass) {
+                                ClassTileView(studyClass: studyClass)
+                            }
+                            .buttonStyle(BouncyButtonStyle())
+                        }
+                    }
+                    .padding()
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
+        .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("My Classes")
         .navigationDestination(for: StudyClass.self) { studyClass in
             ClassDetailView(studyClass: studyClass)
@@ -81,6 +98,21 @@ struct ClassesListView: View {
             QuizPlayView(config: config) { activeConfig = nil }
         }
     }
+
+    private var header: some View {
+        HStack {
+            Text("My Classes")
+                .font(.largeTitle.bold())
+            Spacer()
+            Toggle("Show Empty", isOn: $showEmptyClasses)
+                .toggleStyle(.switch)
+                .font(.subheadline.weight(.semibold))
+                .fixedSize()
+        }
+        .padding(.horizontal)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
 }
 
 private struct EmptyClassesView: View {
@@ -100,6 +132,31 @@ private struct EmptyClassesView: View {
                 .multilineTextAlignment(.center)
             Button(action: onAdd) {
                 Label("Add a Class", systemImage: "plus.circle.fill")
+                    .font(Theme.headlineFont)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+    }
+}
+
+private struct AllEmptyClassesView: View {
+    let onShowEmpty: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("🙈")
+                .font(.system(size: 60))
+            Text("All Your Classes Are Empty")
+                .font(Theme.titleFont)
+            Text("None of your classes have any Flash Quizzes yet.")
+                .font(Theme.bodyFont)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button(action: onShowEmpty) {
+                Label("Show Empty Classes", systemImage: "eye.fill")
                     .font(Theme.headlineFont)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
