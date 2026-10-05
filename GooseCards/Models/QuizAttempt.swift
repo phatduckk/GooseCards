@@ -7,6 +7,7 @@ final class QuizAttempt {
     var date: Date
     var numRight: Int
     var numWrong: Int
+    var numSkipped: Int = 0
     var percent: Double
     var letterGrade: String
     var durationSeconds: Int?
@@ -18,6 +19,7 @@ final class QuizAttempt {
         date: Date = .now,
         numRight: Int,
         numWrong: Int,
+        numSkipped: Int = 0,
         durationSeconds: Int? = nil,
         numQuestionsConfigured: Int? = nil,
         set: FlashCardSet? = nil
@@ -30,6 +32,7 @@ final class QuizAttempt {
         self.date = date
         self.numRight = numRight
         self.numWrong = numWrong
+        self.numSkipped = numSkipped
         self.percent = computedPercent
         self.letterGrade = computedGrade
         self.durationSeconds = durationSeconds

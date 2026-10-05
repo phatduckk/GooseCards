@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct QuizConfig {
+struct QuizConfig: Identifiable {
+    let id = UUID()
     let set: FlashCardSet
     let useTimer: Bool
     let timerMinutes: Int

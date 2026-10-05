@@ -9,7 +9,6 @@ struct QuizBrowserView: View {
     @State private var selectedClassID: UUID?
     @State private var configuringSet: FlashCardSet?
     @State private var activeConfig: QuizConfig?
-    @State private var isShowingQuiz = false
 
     private var filteredSets: [FlashCardSet] {
         allSets
@@ -91,15 +90,11 @@ struct QuizBrowserView: View {
             QuizConfigView(set: set) { config in
                 configuringSet = nil
                 activeConfig = config
-                isShowingQuiz = true
             }
         }
-        .fullScreenCover(isPresented: $isShowingQuiz) {
-            if let activeConfig {
-                QuizPlayView(config: activeConfig) {
-                    isShowingQuiz = false
-                    self.activeConfig = nil
-                }
+        .fullScreenCover(item: $activeConfig) { config in
+            QuizPlayView(config: config) {
+                activeConfig = nil
             }
         }
     }

@@ -33,6 +33,9 @@ struct QuizResultView: View {
             HStack(spacing: 32) {
                 ScoreStat(label: "Right", value: attempt.numRight, color: .green)
                 ScoreStat(label: "Wrong", value: attempt.numWrong, color: .red)
+                if attempt.numSkipped > 0 {
+                    ScoreStat(label: "Skipped", value: attempt.numSkipped, color: .orange)
+                }
             }
 
             Spacer()
@@ -48,6 +51,7 @@ struct QuizResultView: View {
             .padding(.horizontal)
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
         .onAppear {
             if attempt.percent >= 90 { Haptics.success() }

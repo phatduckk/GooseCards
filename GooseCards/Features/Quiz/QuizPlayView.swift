@@ -8,20 +8,19 @@ struct QuizPlayView: View {
 
     @Environment(\.modelContext) private var modelContext
 
-    @State private var cards: [FlashCard] = []
-    @State private var currentIndex = 0
+    @State private var queue: [FlashCard] = []
+    @State private var totalCount = 0
+    @State private var answeredCount = 0
     @State private var isFlipped = false
     @State private var numRight = 0
     @State private var numWrong = 0
+    @State private var everSkippedIDs: Set<UUID> = []
     @State private var secondsRemaining = 0
     @State private var isFinished = false
     @State private var startedAt = Date()
     @State private var savedAttempt: QuizAttempt?
-    @State private var isTimerRunning = false
 
-    private var currentCard: FlashCard? {
-        cards.indices.contains(currentIndex) ? cards[currentIndex] : nil
-    }
+    private var currentCard: FlashCard? { queue.first }
 
     var body: some View {
         Group {
@@ -31,12 +30,12 @@ struct QuizPlayView: View {
                 quizBody
             }
         }
-        .onAppear(perform: setup)
-        .task(id: isTimerRunning) {
-            guard isTimerRunning, config.useTimer else { return }
-            while isTimerRunning && secondsRemaining > 0 {
+        .task {
+            setup()
+            guard config.useTimer else { return }
+            while secondsRemaining > 0 && !isFinished {
                 try? await Task.sleep(for: .seconds(1))
-                guard isTimerRunning else { return }
+                if Task.isCancelled || isFinished { return }
                 secondsRemaining -= 1
                 if secondsRemaining <= 0 {
                     finish()
@@ -46,10 +45,15 @@ struct QuizPlayView: View {
     }
 
     private var quizBody: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             header
             Spacer()
             if let card = currentCard {
+                if everSkippedIDs.contains(card.id) {
+                    Label("You skipped this one — give it another try!", systemImage: "arrow.uturn.forward")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
                 FlipCardView(card: card, isFlipped: $isFlipped)
                     .padding(.horizontal)
                     .id(card.id)
@@ -58,6 +62,7 @@ struct QuizPlayView: View {
             answerButtons
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -68,7 +73,7 @@ struct QuizPlayView: View {
 
     private var header: some View {
         HStack {
-            Text("\(currentIndex + 1) / \(cards.count)")
+            Text("\(min(answeredCount + 1, totalCount)) / \(totalCount)")
                 .font(Theme.headlineFont)
             Spacer()
             if config.useTimer {
@@ -86,7 +91,20 @@ struct QuizPlayView: View {
     }
 
     private var answerButtons: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
+            Button {
+                skip()
+            } label: {
+                Label("Skip", systemImage: "arrow.uturn.forward")
+                    .font(Theme.headlineFont)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            }
+            .background(Color.gray.opacity(0.15))
+            .foregroundStyle(.secondary)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.controlCorner, style: .continuous))
+            .disabled(currentCard == nil || queue.count <= 1)
+
             Button {
                 answer(correct: false)
             } label: {
@@ -116,17 +134,27 @@ struct QuizPlayView: View {
     }
 
     private func setup() {
-        guard cards.isEmpty else { return }
+        guard queue.isEmpty, totalCount == 0 else { return }
         let shuffled = config.set.sortedCards.shuffled()
-        cards = config.useQuestionLimit ? Array(shuffled.prefix(config.questionLimit)) : shuffled
+        queue = config.useQuestionLimit ? Array(shuffled.prefix(config.questionLimit)) : shuffled
+        totalCount = queue.count
         startedAt = .now
         if config.useTimer {
             secondsRemaining = config.timerMinutes * 60
-            isTimerRunning = true
         }
     }
 
+    private func skip() {
+        guard let card = queue.first, queue.count > 1 else { return }
+        everSkippedIDs.insert(card.id)
+        queue.removeFirst()
+        queue.append(card)
+        isFlipped = false
+        Haptics.tap()
+    }
+
     private func answer(correct: Bool) {
+        guard queue.first != nil else { return }
         if correct {
             numRight += 1
             Haptics.success()
@@ -134,19 +162,18 @@ struct QuizPlayView: View {
             numWrong += 1
             Haptics.warning()
         }
+        queue.removeFirst()
+        answeredCount += 1
         isFlipped = false
-        if currentIndex + 1 < cards.count {
-            withAnimation { currentIndex += 1 }
-        } else {
+        if queue.isEmpty {
             finish()
         }
     }
 
     private func finish() {
         guard !isFinished else { return }
-        isTimerRunning = false
-        // Any cards never reached while the timer ran out count as wrong.
-        let unanswered = cards.count - (numRight + numWrong)
+        // Any cards never reached (e.g. the timer ran out) count as wrong.
+        let unanswered = queue.count
         if unanswered > 0 {
             numWrong += unanswered
         }
@@ -154,6 +181,7 @@ struct QuizPlayView: View {
         let attempt = QuizAttempt(
             numRight: numRight,
             numWrong: numWrong,
+            numSkipped: everSkippedIDs.count,
             durationSeconds: config.useTimer ? duration : nil,
             numQuestionsConfigured: config.useQuestionLimit ? config.questionLimit : nil,
             set: config.set
