@@ -78,7 +78,7 @@ struct ClassDetailView: View {
         .background(Theme.background)
         .navigationTitle(studyClass.name)
         .navigationDestination(item: $setToOpen) { set in
-            CardEditorView(set: set)
+            SetOverviewView(set: set)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

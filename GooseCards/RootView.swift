@@ -26,14 +26,6 @@ struct RootView: View {
             .tabItem {
                 Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
             }
-
-            NavigationStack {
-                ImportBrowserView()
-            }
-            .ignoresSafeArea(.container, edges: .horizontal)
-            .tabItem {
-                Label("Import Flash Cards", systemImage: "square.and.arrow.down.fill")
-            }
         }
         .tint(.orange)
     }

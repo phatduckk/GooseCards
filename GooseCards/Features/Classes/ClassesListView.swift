@@ -6,6 +6,7 @@ struct ClassesListView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var isPresentingNewClass = false
+    @State private var isPresentingImport = false
 
     private let columns = [GridItem(.adaptive(minimum: 170), spacing: 18)]
 
@@ -36,6 +37,13 @@ struct ClassesListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    isPresentingImport = true
+                } label: {
+                    Label("Import Flash Cards", systemImage: "bolt.circle.fill")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     isPresentingNewClass = true
                 } label: {
                     Label("New Class", systemImage: "plus.circle.fill")
@@ -44,6 +52,11 @@ struct ClassesListView: View {
         }
         .sheet(isPresented: $isPresentingNewClass) {
             ClassFormView(mode: .create)
+        }
+        .sheet(isPresented: $isPresentingImport) {
+            NavigationStack {
+                ImportBrowserView()
+            }
         }
     }
 }

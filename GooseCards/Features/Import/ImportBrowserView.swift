@@ -27,6 +27,8 @@ struct ImportBrowserView: View {
     @Query private var importedRecords: [ImportedFileRecord]
     @Query(sort: \StudyClass.createdAt) private var classes: [StudyClass]
 
+    @Environment(\.dismiss) private var dismiss
+
     @State private var remoteFiles: [RemoteCardFile] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -63,6 +65,9 @@ struct ImportBrowserView: View {
         .background(Theme.background)
         .navigationTitle("Import Flash Cards")
         .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Done") { dismiss() }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     Task { await load() }
