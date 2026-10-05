@@ -40,6 +40,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.goosecards.app
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: true
+        DEVELOPMENT_TEAM: R45CA69ASN
+        CODE_SIGN_STYLE: Automatic
     scheme:
       testTargets:
         - GooseCardsTests
@@ -56,3 +58,5 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: true
+        DEVELOPMENT_TEAM: R45CA69ASN
+        CODE_SIGN_STYLE: Automatic
