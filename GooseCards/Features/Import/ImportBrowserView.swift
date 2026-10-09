@@ -56,7 +56,6 @@ struct ImportBrowserView: View {
                             } label: {
                                 ImportRow(file: file, status: status(for: file))
                             }
-                            .buttonStyle(.plain)
                         }
                     } footer: {
                         Text("Cards come from github.com/phatduckk/GooseCards. Tap one to import it.")
@@ -129,5 +128,6 @@ private struct ImportRow: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
