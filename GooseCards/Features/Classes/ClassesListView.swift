@@ -6,6 +6,12 @@ struct ClassesListView: View {
     @Environment(\.modelContext) private var modelContext
 
     @AppStorage("showEmptyClasses") private var showEmptyClasses = false
+    @AppStorage(SeenCardFiles.storageKey) private var seenCardFilenames = ""
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// Card filenames currently in the GitHub Cards folder, fetched on launch
+    /// and whenever the app comes back to the foreground.
+    @State private var remoteCardFilenames: [String] = []
 
     @State private var isPresentingNewClass = false
     @State private var isPresentingImport = false
@@ -16,6 +22,13 @@ struct ClassesListView: View {
     @State private var activeConfig: QuizConfig?
 
     private let columns = [GridItem(.adaptive(minimum: 170), spacing: 18)]
+
+    private var hasUnseenCardFiles: Bool {
+        let seen = SeenCardFiles.decode(seenCardFilenames)
+        return remoteCardFilenames.contains {
+            !seen.contains($0) && !DefaultClassSeeder.builtInCardFilenames.contains($0)
+        }
+    }
 
     private var visibleClasses: [StudyClass] {
         showEmptyClasses ? classes : classes.filter { !$0.sets.isEmpty }
@@ -63,6 +76,7 @@ struct ClassesListView: View {
                 } label: {
                     Label("Import Flash Cards", systemImage: "bolt.circle.fill")
                 }
+                .badge(hasUnseenCardFiles ? Text("") : nil)
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -71,6 +85,11 @@ struct ClassesListView: View {
                     Label("New Class", systemImage: "plus.circle.fill")
                 }
             }
+        }
+        .task(id: scenePhase) {
+            guard scenePhase == .active,
+                  let files = try? await GitHubCardsService.listCardFiles() else { return }
+            remoteCardFilenames = files.map(\.name)
         }
         .sheet(isPresented: $isPresentingNewClass) {
             ClassFormView(mode: .create)

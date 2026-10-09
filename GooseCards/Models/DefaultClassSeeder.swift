@@ -4,6 +4,16 @@ import SwiftData
 enum DefaultClassSeeder {
     private static let seededKey = "didSeedDefaultClasses"
 
+    private static let multiplicationSetName = "Multiplication Facts"
+    private static let divisionSetName = "Division Facts"
+
+    /// Cards/*.csv files that duplicate sets seeded on first launch. They
+    /// never count as "new" in the import browser or the import button's dot.
+    static let builtInCardFilenames: Set<String> = [
+        "\(multiplicationSetName).csv",
+        "\(divisionSetName).csv",
+    ]
+
     private static let defaults: [(name: String, emoji: String)] = [
         ("English", "📖"),
         ("Math", "➗"),
@@ -42,8 +52,8 @@ enum DefaultClassSeeder {
         }
 
         if let mathClass {
-            insertSet(named: "Multiplication Facts", emoji: "✖️", cards: multiplicationCards, into: mathClass, context: context)
-            insertSet(named: "Division Facts", emoji: "➗", cards: divisionCards, into: mathClass, context: context)
+            insertSet(named: multiplicationSetName, emoji: "✖️", cards: multiplicationCards, into: mathClass, context: context)
+            insertSet(named: divisionSetName, emoji: "➗", cards: divisionCards, into: mathClass, context: context)
         }
 
         if (try? context.save()) != nil {

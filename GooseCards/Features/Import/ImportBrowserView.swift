@@ -5,12 +5,14 @@ enum ImportStatus {
     case new
     case updated
     case upToDate
+    case builtIn
 
     var label: String {
         switch self {
         case .new: return "New"
         case .updated: return "Updated"
         case .upToDate: return "Imported"
+        case .builtIn: return "Built In"
         }
     }
 
@@ -18,8 +20,23 @@ enum ImportStatus {
         switch self {
         case .new: return .green
         case .updated: return .orange
-        case .upToDate: return .secondary
+        case .upToDate, .builtIn: return .secondary
         }
+    }
+}
+
+/// Filenames from the Cards folder the user has already seen in the import
+/// browser, stored newline-separated in AppStorage. Drives the "new decks"
+/// dot on the import button.
+enum SeenCardFiles {
+    static let storageKey = "seenCardFilenames"
+
+    static func decode(_ raw: String) -> Set<String> {
+        Set(raw.split(separator: "\n").map(String.init))
+    }
+
+    static func encode(_ names: Set<String>) -> String {
+        names.sorted().joined(separator: "\n")
     }
 }
 
@@ -31,6 +48,7 @@ struct ImportBrowserView: View {
     @Query(sort: \StudyClass.createdAt) private var classes: [StudyClass]
 
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(SeenCardFiles.storageKey) private var seenCardFilenames = ""
 
     @State private var remoteFiles: [RemoteCardFile] = []
     @State private var isLoading = false
@@ -49,16 +67,12 @@ struct ImportBrowserView: View {
                 )
             } else {
                 List {
-                    Section {
-                        ForEach(remoteFiles) { file in
-                            Button {
-                                fileToImport = file
-                            } label: {
-                                ImportRow(file: file, status: status(for: file))
-                            }
+                    ForEach(remoteFiles) { file in
+                        Button {
+                            fileToImport = file
+                        } label: {
+                            ImportRow(file: file, status: status(for: file))
                         }
-                    } footer: {
-                        Text("Cards come from github.com/phatduckk/GooseCards. Tap one to import it.")
                     }
                 }
             }
@@ -89,7 +103,9 @@ struct ImportBrowserView: View {
     }
 
     private func status(for file: RemoteCardFile) -> ImportStatus {
-        guard let record = importedRecords.first(where: { $0.filename == file.name }) else { return .new }
+        guard let record = importedRecords.first(where: { $0.filename == file.name }) else {
+            return DefaultClassSeeder.builtInCardFilenames.contains(file.name) ? .builtIn : .new
+        }
         return record.sha == file.sha ? .upToDate : .updated
     }
 
@@ -98,6 +114,8 @@ struct ImportBrowserView: View {
         do {
             remoteFiles = try await GitHubCardsService.listCardFiles()
             errorMessage = nil
+            let seen = SeenCardFiles.decode(seenCardFilenames).union(remoteFiles.map(\.name))
+            seenCardFilenames = SeenCardFiles.encode(seen)
         } catch {
             errorMessage = error.localizedDescription
         }
