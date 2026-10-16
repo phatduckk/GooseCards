@@ -12,7 +12,9 @@ struct QuizPlayView: View {
     @State private var totalCount = 0
     @State private var answeredCount = 0
     @State private var isFlipped = false
-    @State private var isHintRevealed = false
+    /// Remembered across quizzes so a kid who likes picture hints doesn't
+    /// have to turn them back on every time.
+    @AppStorage("showQuizPictures") private var showPictures = false
     @State private var numRight = 0
     @State private var numWrong = 0
     @State private var everSkippedIDs: Set<UUID> = []
@@ -23,6 +25,10 @@ struct QuizPlayView: View {
     @State private var savedAttempt: QuizAttempt?
 
     private var currentCard: FlashCard? { queue.first }
+
+    private var setHasPictures: Bool {
+        config.set.cards.contains { $0.imageData != nil }
+    }
 
     private var accentColor: Color {
         KidPalette.color(forHex: config.set.studyClass?.colorHex ?? KidPalette.all[0].hex)
@@ -65,9 +71,8 @@ struct QuizPlayView: View {
                 FlipCardView(
                     card: card,
                     isFlipped: $isFlipped,
-                    isHintRevealed: $isHintRevealed,
                     accentColor: accentColor,
-                    showImagesOnQuestion: config.showImagesOnQuestion
+                    showsPicture: showPictures
                 )
                 .frame(maxHeight: .infinity)
                 .id(card.id)
@@ -110,6 +115,22 @@ struct QuizPlayView: View {
                         .padding(.vertical, 6)
                         .background(Capsule().fill((secondsRemaining <= 10 ? Color.red : accentColor).opacity(0.15)))
                         .foregroundStyle(secondsRemaining <= 10 ? .red : accentColor)
+                }
+
+                if setHasPictures {
+                    Button {
+                        Haptics.tap()
+                        withAnimation(.easeInOut(duration: 0.25)) { showPictures.toggle() }
+                    } label: {
+                        Label("Hints", systemImage: showPictures ? "lightbulb.fill" : "lightbulb")
+                            .font(.subheadline.weight(.bold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(showPictures ? Color.yellow.opacity(0.3) : Color.gray.opacity(0.15)))
+                            .foregroundStyle(showPictures ? Color.orange : Color.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityValue(showPictures ? "On" : "Off")
                 }
             }
 
@@ -184,7 +205,6 @@ struct QuizPlayView: View {
         queue.removeFirst()
         queue.append(card)
         isFlipped = false
-        isHintRevealed = false
         Haptics.tap()
     }
 
@@ -200,7 +220,6 @@ struct QuizPlayView: View {
         queue.removeFirst()
         answeredCount += 1
         isFlipped = false
-        isHintRevealed = false
         if queue.isEmpty {
             finish()
         }
@@ -231,12 +250,12 @@ struct QuizPlayView: View {
 struct FlipCardView: View {
     let card: FlashCard
     @Binding var isFlipped: Bool
-    @Binding var isHintRevealed: Bool
     let accentColor: Color
-    let showImagesOnQuestion: Bool
+    /// When on, cards with a picture show it above the text on both faces.
+    let showsPicture: Bool
 
-    private var frontImageData: Data? {
-        showImagesOnQuestion || isHintRevealed ? card.imageData : nil
+    private var picture: UIImage? {
+        showsPicture ? card.imageData.flatMap(UIImage.init(data:)) : nil
     }
 
     var body: some View {
@@ -247,24 +266,15 @@ struct FlipCardView: View {
         // larger than the visible, clipped card — letting taps on sibling
         // controls (the quit button, Skip) register as a card flip instead.
         GeometryReader { geo in
+            let picture = picture
             ZStack {
-                faceView(
-                    text: card.front,
-                    imageData: frontImageData,
-                    badge: ("Question", "questionmark.circle.fill"),
-                    showsHintButton: !showImagesOnQuestion && !isHintRevealed && card.imageData != nil
-                )
-                .opacity(isFlipped ? 0 : 1)
-                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+                faceView(text: card.front, picture: picture, badge: ("Question", "questionmark.circle.fill"))
+                    .opacity(isFlipped ? 0 : 1)
+                    .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
 
-                faceView(
-                    text: card.back,
-                    imageData: card.imageData,
-                    badge: ("Answer", "checkmark.seal.fill"),
-                    showsHintButton: false
-                )
-                .opacity(isFlipped ? 1 : 0)
-                .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+                faceView(text: card.back, picture: picture, badge: ("Answer", "checkmark.seal.fill"))
+                    .opacity(isFlipped ? 1 : 0)
+                    .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
@@ -278,26 +288,22 @@ struct FlipCardView: View {
     }
 
     @ViewBuilder
-    private func faceView(text: String, imageData: Data?, badge: (label: String, icon: String), showsHintButton: Bool) -> some View {
+    private func faceView(text: String, picture: UIImage?, badge: (label: String, icon: String)) -> some View {
         ZStack {
-            if let imageData, let uiImage = UIImage(data: imageData) {
-                // A hard-resolved GeometryReader breaks the layout circularity that
-                // occurs when scaledToFill()'s aspect-ratio negotiation shares a
-                // ZStack with another measurement-driven sibling (AdaptiveQuizText's
-                // ViewThatFits) — without it, the image can resolve to a wildly
-                // oversized frame that bleeds past the card's clip bounds.
-                GeometryReader { imageGeo in
-                    Image(uiImage: uiImage)
+            if let picture {
+                // Blurred, filled copy of the picture as the card background.
+                // A hard-resolved GeometryReader keeps scaledToFill()'s
+                // aspect-ratio negotiation from resolving to an oversized frame
+                // that bleeds past the card's clip bounds.
+                GeometryReader { geo in
+                    Image(uiImage: picture)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: imageGeo.size.width, height: imageGeo.size.height)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .blur(radius: 30, opaque: true)
                         .clipped()
                 }
-                LinearGradient(
-                    colors: [.black.opacity(0.15), .black.opacity(0.55)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                Color.black.opacity(0.4)
             } else {
                 LinedPaperBackground(tint: accentColor)
             }
@@ -309,28 +315,16 @@ struct FlipCardView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(Capsule().fill(.ultraThinMaterial))
-                        .foregroundStyle(imageData == nil ? accentColor : .white)
-
+                        .foregroundStyle(picture == nil ? accentColor : .white)
                     Spacer()
-
-                    if showsHintButton {
-                        Button {
-                            Haptics.tap()
-                            isHintRevealed = true
-                        } label: {
-                            Label("Hint", systemImage: "lightbulb.fill")
-                                .font(.caption.weight(.bold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Capsule().fill(.ultraThinMaterial))
-                                .foregroundStyle(.yellow)
-                        }
-                        .buttonStyle(.plain)
-                    }
                 }
 
-                AdaptiveQuizText(text: text, color: imageData == nil ? Color.primary : Color.white)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if let picture {
+                    PictureAndText(picture: picture, text: text)
+                } else {
+                    AdaptiveQuizText(text: text, color: Color.primary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .padding(24)
         }
@@ -341,6 +335,50 @@ struct FlipCardView: View {
                 .stroke(accentColor.opacity(0.4), lineWidth: 2)
         )
         .kidTileShadow()
+    }
+}
+
+/// Picture on top, text underneath, so the text never covers the picture.
+/// The split follows the text: it gets the height it needs to stay readable
+/// (estimated at `readableSize`), clamped so short text still gets a decent
+/// band and long text still leaves the picture at least a third of the card.
+/// AdaptiveQuizText then sizes itself to whatever band it gets, so a rough
+/// estimate can't cause overflow. Sizes are hard-resolved from a
+/// GeometryReader rather than negotiated, which avoids layout circularity
+/// between the picture's aspect ratio and AdaptiveQuizText's ViewThatFits.
+private struct PictureAndText: View {
+    let picture: UIImage
+    let text: String
+
+    private static let readableSize: CGFloat = 34
+    private static let spacing: CGFloat = 16
+
+    var body: some View {
+        GeometryReader { geo in
+            let available = max(geo.size.height - Self.spacing, 0)
+            let needed = AdaptiveQuizText.estimatedHeight(text: text, size: Self.readableSize, width: geo.size.width)
+            let textHeight = min(max(needed, available * 0.25), available * 0.66)
+            let pictureHeight = available - textHeight
+            // Never draw the picture larger than its own pixel size, so small
+            // pictures stay crisp instead of being stretched.
+            let pixelSize = CGSize(width: picture.size.width * picture.scale, height: picture.size.height * picture.scale)
+
+            VStack(spacing: Self.spacing) {
+                Image(uiImage: picture)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(
+                        maxWidth: min(geo.size.width, pixelSize.width),
+                        maxHeight: min(pictureHeight, pixelSize.height)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+                    .frame(width: geo.size.width, height: pictureHeight)
+
+                AdaptiveQuizText(text: text, color: .white)
+                    .frame(width: geo.size.width, height: textHeight)
+            }
+        }
     }
 }
 
@@ -367,9 +405,11 @@ private struct AdaptiveQuizText: View {
         let isBullet: Bool
     }
 
+    private var lines: [Line] { Self.lines(in: text) }
+
     /// Splits on "\n" and classifies each line as a bullet ("^\s*\*.*$") or
     /// plain text, stripping the leading "*" marker from bullet lines.
-    private var lines: [Line] {
+    private static func lines(in text: String) -> [Line] {
         text.components(separatedBy: "\n").compactMap { raw in
             let trimmed = raw.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("*") {
@@ -382,6 +422,31 @@ private struct AdaptiveQuizText: View {
     }
 
     private var hasBullets: Bool { lines.contains { $0.isBullet } }
+
+    /// Rough height `text` needs at `size` when wrapped to `width`, using the
+    /// same font and bullet spacing as `content(size:)`. Only used to divide
+    /// space between a picture and its text; rendering still goes through
+    /// ViewThatFits.
+    static func estimatedHeight(text: String, size: CGFloat, width: CGFloat) -> CGFloat {
+        let base = UIFont.systemFont(ofSize: size, weight: .heavy)
+        let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: size) } ?? base
+        let lines = lines(in: text)
+        let hasBullets = lines.contains { $0.isBullet }
+        let bulletIndent = ("•" as NSString).size(withAttributes: [.font: font]).width + size * 0.22
+
+        func height(_ string: String, width: CGFloat) -> CGFloat {
+            ceil((string as NSString).boundingRect(
+                with: CGSize(width: max(width, 1), height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font],
+                context: nil
+            ).height)
+        }
+
+        guard hasBullets else { return height(text, width: width) }
+        let lineHeights = lines.map { height($0.content, width: $0.isBullet ? width - bulletIndent : width) }
+        return lineHeights.reduce(0, +) + CGFloat(max(lines.count - 1, 0)) * size * 0.28
+    }
 
     var body: some View {
         ViewThatFits(in: [.horizontal, .vertical]) {
